@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/nice_blue"
+    android:orientation="vertical">
+
+    <ImageButton
+        android:id="@+id/PlayButton"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:layout_marginBottom="80dp"
+        android:backgroundTint="#00E4C8C8"
+        android:foregroundTint="#8D69DD"
+        android:hapticFeedbackEnabled="true"
+        android:scaleX="1"
+        android:scaleY="1"
+        android:src="@drawable/play_button"
+        android:tint="@color/purple_500"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/NextButton"
+        app:layout_constraintHorizontal_bias="0.518"
+        app:layout_constraintStart_toEndOf="@+id/LastButton" />
+
+    <ImageButton
+        android:id="@+id/NextButton"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_marginEnd="80dp"
+        android:backgroundTint="#00FFFFFF"
+        android:foregroundTint="#9C27B0"
+        android:scaleX="1"
+        android:scaleY="1"
+        android:src="@drawable/next_button"
+        android:tint="@color/purple_500"
+        app:layout_constraintBottom_toBottomOf="@+id/PlayButton"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/PlayButton" />
+
+    <ImageButton
+        android:id="@+id/LastButton"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_marginStart="80dp"
+        android:backgroundTint="#00FFFFFF"
+        android:scaleX="1"
+        android:scaleY="1"
+        android:src="@drawable/last_button"
+        android:tint="@color/purple_500"
+        app:layout_constraintBottom_toBottomOf="@+id/PlayButton"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/PlayButton" />
+
+    <ImageView
+        android:id="@+id/ThumbNailImg"
+        android:layout_width="310dp"
+        android:layout_height="310dp"
+        android:layout_marginTop="60dp"
+        android:background="@drawable/home_icon"
+        android:contentDescription="big image"
+        android:tint="#00CD4F4F"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.504"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/SongName"
+        android:layout_width="0dp"
+        android:layout_height="31dp"
+        android:layout_marginTop="16dp"
+        android:text="Some Testing Text"
+        android:textAlignment="textStart"
+        android:textColor="#000000"
+        android:textSize="25sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="@+id/ThumbNailImg"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="@+id/ThumbNailImg"
+        app:layout_constraintTop_toBottomOf="@+id/ThumbNailImg"
+        tools:text="Some Testing Text" />
+
+    <SeekBar
+        android:id="@+id/SongSeekBar"
+        android:layout_width="0dp"
+        android:layout_height="22dp"
+        android:layout_marginBottom="104dp"
+        android:progressTint="@color/purple_200"
+        android:thumbTint="@color/purple_500"
+        app:layout_constraintBottom_toTopOf="@+id/PlayButton"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <TextView
+        android:id="@+id/CurrentSongPositionText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="12dp"
+        android:text="00:00"
+        android:textColor="#000000"
+        app:layout_constraintStart_toStartOf="@+id/SongSeekBar"
+        app:layout_constraintTop_toBottomOf="@+id/SongSeekBar" />
+
+    <TextView
+        android:id="@+id/TotalSongTimeText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:layout_marginEnd="16dp"
+        android:text="00:00"
+        android:textAlignment="viewEnd"
+        android:textColor="#000000"
+        app:layout_constraintEnd_toEndOf="@+id/SongSeekBar"
+        app:layout_constraintTop_toBottomOf="@+id/SongSeekBar" />
+
+    <ImageButton
+        android:id="@+id/ShuffleButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:backgroundTint="#00FFFFFF"
+        android:src="@drawable/shuffle_icon"
+        android:tint="@color/purple_200"
+        app:layout_constraintBottom_toTopOf="@+id/LastButton"
+        app:layout_constraintEnd_toStartOf="@+id/LastButton" />
+
+    <ImageButton
+        android:id="@+id/LoopButton"
+        android:layout_width="44dp"
+        android:layout_height="wrap_content"
+        android:backgroundTint="#00FFFFFF"
+        android:src="@drawable/loop_icon"
+        android:tint="@color/purple_200"
+        app:layout_constraintBottom_toTopOf="@+id/NextButton"
+        app:layout_constraintStart_toEndOf="@+id/NextButton" />
+
+    <Button
+        android:id="@+id/TESTBUTTON"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="selection"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/ArtistsNames"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="A Really Cool Band"
+        android:textColor="#000000"
+        app:layout_constraintStart_toStartOf="@+id/SongName"
+        app:layout_constraintTop_toBottomOf="@+id/SongName" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
