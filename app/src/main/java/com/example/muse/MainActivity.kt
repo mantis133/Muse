@@ -17,10 +17,12 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.SeekBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.ui.graphics.Color
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
@@ -45,20 +47,46 @@ class MainActivity : ComponentActivity() {
     private lateinit var SongNameTexView: TextView
     private lateinit var ArtistTextView : TextView
 
-    private lateinit var TestButton : Button
+    private lateinit var TestButton : ImageButton
 
 
-    private lateinit var mediaPlayer: MediaPlayer
+//    private lateinit var mediaPlayer: MediaPlayer
     private var PlaylistCurrentPosition = 2
     private var songPosition: Int? = 0
 
 
-    private val requestPermisionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean -> if (isGranted) {
-        Log.i("Permission :","Granted")
-        } else {
-            Log.i("Permission :", "Denied")
+    // Declare the permissions as constants
+    private val REQUEST_CODE = 1
+    private val PERMISSIONS = arrayOf(
+        Manifest.permission.READ_EXTERNAL_STORAGE,
+        Manifest.permission.WRITE_EXTERNAL_STORAGE
+    )
+
+    // Check if the permissions are granted
+    private fun hasPermissions(): Boolean {
+        for (permission in PERMISSIONS) {
+            if (ActivityCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+                return false
+            }
+        }
+        return true
+    }
+
+    // Request the permissions if not granted
+    private fun requestPermissions() {
+        ActivityCompat.requestPermissions(this, PERMISSIONS, REQUEST_CODE)
+    }
+
+    // Handle the result of the permission request
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_CODE) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permission granted, proceed with accessing storage emulated 0
+            } else {
+                // Permission denied, show a message to the user
+                Toast.makeText(this, "Please grant the permissions to access storage emulated 0", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -83,34 +111,20 @@ class MainActivity : ComponentActivity() {
 
         ThumbnailImage.setImageResource(R.drawable.home_icon)
 
-
-        val filepath = "/sdcard/Music/Bust Your Knee Caps (Johnny Don't Leave Me) - Pomplamoose.mp3"
-        val filepath2 = "/sdcard/Music/T & Sugah x NCT - Stardust (feat. Miyoki) [Lyrics].mp3"
-        val filepath3 = "/sdcard/Music/Faith Marie - Toxic Thoughts.mp3"
-        Log.d("can I change this","cool dudes")
-
-//        mediaPlayer = MediaManager.getMediaPlayer(this, filepath)
-        mediaPlayer = MediaManager.getMediaPlayer(this, filepath2)
-
-
-        val dur = mediaPlayer.duration ?: 0
-        SongSeekBar.max = dur
-        TotalSongTime.text = MilliSecsToMins(dur)
-
-        SongNameTexView.text = MediaManager.SongName
-        ArtistTextView.text = MediaManager.ArtistName
-
-
+        updateSongInfo()
 
         SongSeekBar.setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener{
             override fun onProgressChanged(p0: SeekBar?, progress: Int, fromUser: Boolean) {
                 CurrentSongPosText.text = "${MilliSecsToMins(progress)}"
+                MediaManager.trackPosition = progress
                 if (fromUser) {
-                    mediaPlayer.seekTo(progress)
+                    MediaManager.mediaPlayer?.seekTo(progress)
                 }
 
                 if (progress == SongSeekBar.max){
-                    MediaManager.skipNext()
+                    MediaManager.pause()
+                    PlayButton.setImageResource(R.drawable.play_button)
+//                    MediaManager.skipNext()
                 }
             }
 
@@ -120,18 +134,16 @@ class MainActivity : ComponentActivity() {
         })
 
 
-
         val updateSeekBar = object : Runnable {
             override fun run() {
                 try {
-                    SongSeekBar.progress = mediaPlayer.currentPosition ?: 0
+                    SongSeekBar.progress = MediaManager.mediaPlayer?.currentPosition ?: 0
                     SongSeekBar.postDelayed(this, 1000)
                 } catch (e:IllegalStateException) {
                     // this just happens when the app swaps activity
                     // this is because the media player is released causing the top call in the try block to access a variable that doesn't exist
                     // idk what to put here cause leaving it blank just works
                 }
-
             }
         }
 
@@ -143,35 +155,32 @@ class MainActivity : ComponentActivity() {
         onShuffle(ShuffleButton)
         onLoop(LoopButton)
 
-        TestButton = findViewById(R.id.TESTBUTTON)
-        TestButton.setOnClickListener {
-            val i = Intent(this@MainActivity, SongSelection::class.java)
-            startActivity(i)
-        }
+        loadNav()
+
     }
 
-    private fun requestPermissions(){
-        when {
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.READ_EXTERNAL_STORAGE
-            ) == PackageManager.PERMISSION_GRANTED -> {
-                // perms allowed
-            }
-            ActivityCompat.shouldShowRequestPermissionRationale(
-                this,
-                Manifest.permission.READ_EXTERNAL_STORAGE
-            ) -> {
-                // man idek
-        } else -> {
-            // perms not asked yet
-            requestPermisionLauncher.launch(
-                Manifest.permission.READ_EXTERNAL_STORAGE
-            )
-        }
-
-        }
-    }
+//    private fun requestPermissions(){
+//        when {
+//            ContextCompat.checkSelfPermission(
+//                this,
+//                Manifest.permission.READ_EXTERNAL_STORAGE
+//            ) == PackageManager.PERMISSION_GRANTED -> {
+//                // perms allowed
+//            }
+//            ActivityCompat.shouldShowRequestPermissionRationale(
+//                this,
+//                Manifest.permission.READ_EXTERNAL_STORAGE
+//            ) -> {
+//                // man idek
+//        } else -> {
+//            // perms not asked yet
+//            requestPermisionLauncher.launch(
+//                Manifest.permission.READ_EXTERNAL_STORAGE
+//            )
+//        }
+//
+//        }
+//    }
 
     private fun MilliSecsToMins(Milliseconds: Int): String {
         val seconds = Milliseconds / 1000
@@ -182,16 +191,52 @@ class MainActivity : ComponentActivity() {
         return "$totalStringMins:$totalStringSecs"
     }
 
+    private fun loadNav(){
+        // I cbf writing a separate function per page so Im copy and pasting a template in every file.
+        val playlistItemsButton = findViewById<ImageButton>(R.id.SongListButton)
+        val musicControlsButton = findViewById<ImageButton>(R.id.mediaControlsButton)
+        val playlistSelectionButton = findViewById<ImageButton>(R.id.SongSelectionButton)
+
+        playlistItemsButton.setOnClickListener {
+
+        }
+
+//        musicControlsButton.setOnClickListener {
+//
+//        }
+
+        playlistSelectionButton.setOnClickListener {
+            val i = Intent(this@MainActivity, SongSelection::class.java)
+            startActivity(i)
+            overridePendingTransition(R.anim.fade_in,R.anim.fade_out)
+        }
+    }
+
+    private fun updateSongInfo(){
+        try{
+            val dur = MediaManager.mediaPlayer?.duration ?: 0
+            SongSeekBar.max = dur
+            TotalSongTime.text = MilliSecsToMins(dur)
+
+            SongNameTexView.text = MediaManager.SongName
+            ArtistTextView.text = MediaManager.ArtistName
+        } catch (e: UninitializedPropertyAccessException){
+            SongNameTexView.text = "No Song Playing"
+            ArtistTextView.text = "Unknown"
+        }
+    }
+
     private fun onSkipNext(button: ImageButton){
         button.setOnClickListener {
-            PlaylistCurrentPosition += 1
+            MediaManager.skipNext()
+            updateSongInfo()
         }
     }
 
     private fun onSkipLast(button: ImageButton){
         button.setOnClickListener {
-            PlaylistCurrentPosition -= 1
-
+            MediaManager.skipLast()
+            updateSongInfo()
         }
 
     }
@@ -246,14 +291,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun onResume() {
+    override fun onResume() { // think this is when the activity regains focus
         super.onResume()
 //        songPosition?.let { mediaPlayer?.seekTo(it) }
 //        mediaPlayer?.start()
         Log.d("resum", "resumed")
     }
 
-    override fun onPause() {
+    override fun onPause() { // think this means when the app is running but the activity is not in focus
         super.onPause()
 //        mediaPlayer?.pause()
 //        songPosition = mediaPlayer?.currentPosition
@@ -262,23 +307,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        mediaPlayer.release()
+        MediaManager.kill()
     }
 
 }
 
-//@Composable
-//fun Greeting(name: String, modifier: Modifier = Modifier) {
-//    Text(
-//        text = "Hello $name!",
-//        modifier = modifier
-//    )
-//}
-//
-//@Preview(showBackground = true)
-//@Composable
-//fun GreetingPreview() {
-//    MuseTheme {
-//        Greeting("Android")
-//    }
-//}

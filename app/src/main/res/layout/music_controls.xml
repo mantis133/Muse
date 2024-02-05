@@ -11,7 +11,6 @@
         android:id="@+id/PlayButton"
         android:layout_width="64dp"
         android:layout_height="64dp"
-        android:layout_marginBottom="80dp"
         android:backgroundTint="#00E4C8C8"
         android:foregroundTint="#8D69DD"
         android:hapticFeedbackEnabled="true"
@@ -22,7 +21,8 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/NextButton"
         app:layout_constraintHorizontal_bias="0.518"
-        app:layout_constraintStart_toEndOf="@+id/LastButton" />
+        app:layout_constraintStart_toEndOf="@+id/LastButton"
+        app:layout_constraintTop_toBottomOf="@+id/SongSeekBar" />
 
     <ImageButton
         android:id="@+id/NextButton"
@@ -86,13 +86,13 @@
         android:id="@+id/SongSeekBar"
         android:layout_width="0dp"
         android:layout_height="22dp"
-        android:layout_marginBottom="104dp"
+        android:layout_marginTop="20dp"
         android:progressTint="@color/purple_200"
         android:thumbTint="@color/purple_500"
-        app:layout_constraintBottom_toTopOf="@+id/PlayButton"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.0"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/ArtistsNames" />
 
     <TextView
         android:id="@+id/CurrentSongPositionText"
@@ -119,31 +119,25 @@
 
     <ImageButton
         android:id="@+id/ShuffleButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:backgroundTint="#00FFFFFF"
+        android:contentDescription="shuffle playlist"
         android:src="@drawable/shuffle_icon"
-        android:tint="@color/purple_200"
+        android:tint="@color/teal_700"
         app:layout_constraintBottom_toTopOf="@+id/LastButton"
         app:layout_constraintEnd_toStartOf="@+id/LastButton" />
 
     <ImageButton
         android:id="@+id/LoopButton"
-        android:layout_width="44dp"
-        android:layout_height="wrap_content"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:backgroundTint="#00FFFFFF"
+        android:contentDescription="Loop Playlist"
         android:src="@drawable/loop_icon"
         android:tint="@color/purple_200"
         app:layout_constraintBottom_toTopOf="@+id/NextButton"
         app:layout_constraintStart_toEndOf="@+id/NextButton" />
-
-    <Button
-        android:id="@+id/TESTBUTTON"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="selection"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/ArtistsNames"
@@ -154,5 +148,56 @@
         android:textColor="#000000"
         app:layout_constraintStart_toStartOf="@+id/SongName"
         app:layout_constraintTop_toBottomOf="@+id/SongName" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/NavBar"
+        android:layout_width="0dp"
+        android:layout_height="64dp"
+        android:background="#99000000"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <ImageButton
+            android:id="@+id/SongSelectionButton"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:backgroundTint="#00FFFFFF"
+            android:scaleX="1.5"
+            android:scaleY="1.5"
+            android:src="@drawable/records"
+            android:tint="@color/pink_lighter"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/MediaControlsButton"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageButton
+            android:id="@+id/MediaControlsButton"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:backgroundTint="#00FFFFFF"
+            android:src="@drawable/ph_music_note"
+            android:tint="#BA85FB"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageButton
+            android:id="@+id/SongListButton"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:backgroundTint="#00FFFFFF"
+            android:scaleX="2"
+            android:scaleY="2"
+            android:src="@drawable/tabler_playlist"
+            android:tint="@color/pink_lighter"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/MediaControlsButton"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
