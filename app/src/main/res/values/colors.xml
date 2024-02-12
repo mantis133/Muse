@@ -11,4 +11,7 @@
 
     <color name="pink_lighter">#FFFFE0E0</color>
     <color name="pink_light">#FFFFC0D0</color>
+
+    <color name="darker_yellow">#FFFCF783</color>
+    <color name="banana">#FFFDFAB5</color>
 </resources>

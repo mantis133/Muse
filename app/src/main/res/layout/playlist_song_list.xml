@@ -4,61 +4,59 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF"
-    android:backgroundTint="@color/nice_blue">
+    android:background="@color/nice_blue">
 
     <LinearLayout
-        android:id="@+id/TopLayer"
+        android:id="@+id/SongList"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:orientation="vertical"
-        app:layout_constraintBottom_toBottomOf="@+id/constraintLayout"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.495"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/linearLayout">
+        app:layout_constraintTop_toTopOf="parent">
 
     </LinearLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/constraintLayout"
+        android:id="@+id/constraintLayout2"
         android:layout_width="0dp"
         android:layout_height="64dp"
-        android:background="#80000000"
+        android:background="#99000000"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
 
         <ImageButton
-            android:id="@+id/songSelectionButton"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:backgroundTint="#00FFFFFF"
-            android:scaleX="1.5"
-            android:scaleY="1.5"
-            android:src="@drawable/records"
-            android:tint="@color/purple_200"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/mediaControlsButton"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <ImageButton
-            android:id="@+id/songListButton"
+            android:id="@+id/SongListButtonPLP"
             android:layout_width="50dp"
             android:layout_height="50dp"
             android:backgroundTint="#00FFFFFF"
             android:scaleX="2"
             android:scaleY="2"
             android:src="@drawable/tabler_playlist"
-            android:tint="@color/pink_lighter"
+            android:tint="@color/purple_200"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/mediaControlsButton"
+            app:layout_constraintEnd_toStartOf="@+id/mediaControlsButtonPLP"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
         <ImageButton
-            android:id="@+id/mediaControlsButton"
+            android:id="@+id/SongSelectionButtonPLP"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:backgroundTint="#00FFFFFF"
+            android:scaleX="1.5"
+            android:scaleY="1.5"
+            android:src="@drawable/records"
+            android:tint="@color/pink_lighter"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/mediaControlsButtonPLP"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageButton
+            android:id="@+id/mediaControlsButtonPLP"
             android:layout_width="50dp"
             android:layout_height="50dp"
             android:backgroundTint="#00FFFFFF"
@@ -68,31 +66,6 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
-
     </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <LinearLayout
-        android:id="@+id/linearLayout"
-        android:layout_width="0dp"
-        android:layout_height="50dp"
-        android:orientation="horizontal"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
-
-        <Button
-            android:id="@+id/LocalStorage"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Local Storage" />
-
-        <Button
-            android:id="@+id/SdCardStorage"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Sd Card Storage" />
-    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

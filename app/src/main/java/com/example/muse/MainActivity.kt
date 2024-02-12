@@ -4,12 +4,20 @@ import android.Manifest
 import android.app.Activity
 import android.app.Notification
 import android.app.Notification.MediaStyle
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.media.MediaPlayer
 import android.media.session.MediaSession
+import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.provider.MediaStore.Audio.Media
 import android.util.Log
 import android.view.View
 import android.widget.Button
@@ -29,7 +37,7 @@ import androidx.core.content.ContextCompat
 import java.io.IOException
 import java.lang.IllegalStateException
 import java.io.File
-
+import java.lang.IllegalArgumentException
 
 
 class MainActivity : ComponentActivity() {
@@ -48,9 +56,9 @@ class MainActivity : ComponentActivity() {
     private lateinit var ArtistTextView : TextView
 
     private lateinit var TestButton : ImageButton
+    private lateinit var receiver : BroadcastReceiver
 
 
-//    private lateinit var mediaPlayer: MediaPlayer
     private var PlaylistCurrentPosition = 2
     private var songPosition: Int? = 0
 
@@ -93,7 +101,40 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setContentView(R.layout.music_controls);
+        setContentView(R.layout.music_controls)
+
+        try {
+            val mediaPlayer = MediaManager.mediaPlayer!!
+            mediaPlayer.setOnCompletionListener {
+                MediaManager.skipNext()
+                updateSongInfo()
+                Intent(this, MusicService::class.java).also { it.action = MusicService.Actions.UPDATE.toString(); startService(it) }
+            }
+        } catch(e: NullPointerException) {
+
+        }
+
+        receiver = object : BroadcastReceiver() {
+            override fun onReceive(p0: Context?, p1: Intent?) {
+                when(p1?.action){
+                    "com.muse.update_song_info" -> {
+                        updateSongInfo()
+                    }
+                }
+            }
+        }
+        val intentFilter = IntentFilter().apply {
+            addAction("com.muse.update_song_info")
+        }
+
+        registerReceiver(receiver,intentFilter)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel("com.muse.music_channel", "Media Playback", NotificationManager.IMPORTANCE_LOW)
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
+        }
+
 
         PlayButton = findViewById<ImageButton>(R.id.PlayButton)
         NextButton = findViewById(R.id.NextButton)
@@ -109,7 +150,7 @@ class MainActivity : ComponentActivity() {
         SongNameTexView = findViewById(R.id.SongName)
         ArtistTextView = findViewById(R.id.ArtistsNames)
 
-        ThumbnailImage.setImageResource(R.drawable.home_icon)
+//        ThumbnailImage.scaleType = ImageView.ScaleType.CENTER_CROP
 
         updateSongInfo()
 
@@ -122,9 +163,11 @@ class MainActivity : ComponentActivity() {
                 }
 
                 if (progress == SongSeekBar.max){
-                    MediaManager.pause()
+//                    MediaManager.pause()
                     PlayButton.setImageResource(R.drawable.play_button)
 //                    MediaManager.skipNext()
+                    SongSeekBar.progress = 0
+                    updateSongInfo()
                 }
             }
 
@@ -154,9 +197,25 @@ class MainActivity : ComponentActivity() {
         onPlayPause(PlayButton)
         onShuffle(ShuffleButton)
         onLoop(LoopButton)
-
         loadNav()
 
+        val externalStorageVolumes: Array<File?> = ContextCompat.getExternalFilesDirs(this, null)
+        val sdCardStorage = externalStorageVolumes
+        for (file in sdCardStorage){
+            Log.d("dirs","$file")
+        }
+
+    }
+
+    override fun onStart() {
+        super.onStart()
+        Log.d("creation","start")
+
+    }
+
+    override fun onStop() {
+        super.onStop()
+        Log.d("creation","stop")
     }
 
 //    private fun requestPermissions(){
@@ -198,7 +257,9 @@ class MainActivity : ComponentActivity() {
         val playlistSelectionButton = findViewById<ImageButton>(R.id.SongSelectionButton)
 
         playlistItemsButton.setOnClickListener {
-
+            val i = Intent(this@MainActivity, PlaylistSongSelection::class.java)
+            startActivity(i)
+            overridePendingTransition(R.anim.enter_from_left,R.anim.exit_to_right)
         }
 
 //        musicControlsButton.setOnClickListener {
@@ -208,7 +269,7 @@ class MainActivity : ComponentActivity() {
         playlistSelectionButton.setOnClickListener {
             val i = Intent(this@MainActivity, SongSelection::class.java)
             startActivity(i)
-            overridePendingTransition(R.anim.fade_in,R.anim.fade_out)
+            overridePendingTransition(R.anim.enter_from_right,R.anim.exit_to_left)
         }
     }
 
@@ -220,9 +281,19 @@ class MainActivity : ComponentActivity() {
 
             SongNameTexView.text = MediaManager.SongName
             ArtistTextView.text = MediaManager.ArtistName
+            when(MediaManager.AlbumArtBitMap){
+                null -> ThumbnailImage.setImageResource(R.drawable.home_icon)
+                else -> ThumbnailImage.setImageBitmap(MediaManager.AlbumArtBitMap)
+            }
         } catch (e: UninitializedPropertyAccessException){
             SongNameTexView.text = "No Song Playing"
             ArtistTextView.text = "Unknown"
+            ThumbnailImage.setImageResource(R.drawable.home_icon)
+        }
+        if (MediaManager.isPaused) {
+            PlayButton.setImageResource(R.drawable.play_button)
+        } else {
+            PlayButton.setImageResource(R.drawable.pause_button)
         }
     }
 
@@ -247,52 +318,68 @@ class MainActivity : ComponentActivity() {
         } else {
             button.setImageResource(R.drawable.pause_button)
         }
+
+        try {
+            val mightFile = MediaManager.SongName
+        } catch (e: UninitializedPropertyAccessException){
+            return
+        }
+
         button.setOnClickListener{
             MediaManager.isPaused = !MediaManager.isPaused
             if (MediaManager.isPaused) {
                 button.setImageResource(R.drawable.play_button)
                 MediaManager.pause()
+                Intent(this, MusicService::class.java).also {it.action = MusicService.Actions.PLAYING.toString(); startService(it)}
             } else {
+                Log.d("play","button")
                 button.setImageResource(R.drawable.pause_button)
                 MediaManager.play()
+                Intent(this, MusicService::class.java).also { it.action = MusicService.Actions.UNREGISTER.toString(); startService(it) }
+                Intent(this, MusicService::class.java).also{ it.action = MusicService.Actions.START.toString();startService(it) }
+                Intent(this, MusicService::class.java).also { it.action = MusicService.Actions.PAUSED.toString(); startService(it) }
+
             }
         }
     }
 
     private fun onShuffle(button: ImageButton){
         if (MediaManager.Shuffled) {
-            button.setColorFilter(R.color.purple_500)
+            button.setColorFilter(R.color.banana)
         } else {
             button.setColorFilter(null)
         }
         button.setOnClickListener{
             MediaManager.Shuffled = !MediaManager.Shuffled
             if (MediaManager.Shuffled) {
-                button.setColorFilter(R.color.purple_500)
+                button.setColorFilter(R.color.banana)
             } else {
                 button.setColorFilter(null)
+//                button.setColorFilter(R.color.darker_yellow)
             }
         }
     }
 
     private fun onLoop(button: ImageButton){
         if (MediaManager.looping) {
-            button.setColorFilter(R.color.purple_500)
+            button.setColorFilter(R.color.banana)
         } else {
             button.setColorFilter(null)
         }
         button.setOnClickListener {
             MediaManager.looping = !MediaManager.looping
             if (MediaManager.looping) {
-                button.setColorFilter(R.color.purple_500)
-            } else {
+                button.setColorFilter(R.color.banana)
+            } else if (!MediaManager.looping) {
                 button.setColorFilter(null)
+//                button.setColorFilter(R.color.darker_yellow)
             }
         }
     }
 
     override fun onResume() { // think this is when the activity regains focus
         super.onResume()
+        updateSongInfo()
 //        songPosition?.let { mediaPlayer?.seekTo(it) }
 //        mediaPlayer?.start()
         Log.d("resum", "resumed")
@@ -303,11 +390,14 @@ class MainActivity : ComponentActivity() {
 //        mediaPlayer?.pause()
 //        songPosition = mediaPlayer?.currentPosition
         Log.d("paws", "pawsed")
+//        unregisterReceiver(receiver)
     }
 
     override fun onDestroy() {
         super.onDestroy()
         MediaManager.kill()
+        unregisterReceiver(receiver)
+        Intent(this, MusicService::class.java).also{it.action = MusicService.Actions.STOP.toString();startService(it)}
     }
 
 }

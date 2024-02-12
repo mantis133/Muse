@@ -1,6 +1,9 @@
 package com.example.muse
 
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
@@ -9,7 +12,9 @@ import android.os.Environment
 import android.util.Log
 import android.view.View
 import androidx.core.content.ContextCompat
+import androidx.core.content.ContextCompat.registerReceiver
 import java.io.File
+import java.io.FileNotFoundException
 import java.io.IOException
 import java.util.Vector
 
@@ -25,11 +30,13 @@ object MediaManager {
 
     var trackPosition: Int = 0
 
-    lateinit var playlist: Playlist
+    var playlist: Playlist? = null
 
     lateinit var SongName : String
     lateinit var ArtistName : String
-    lateinit var AlbumArtBitMap : Bitmap
+    var AlbumArtBitMap : Bitmap? = null
+
+
 
     fun loadTrack(path: String){
         val location = Environment.getExternalStorageDirectory().absolutePath
@@ -60,22 +67,30 @@ object MediaManager {
     }
 
     fun loadPlaylistTrack(){
-        val file = File(playlist.songs[playlistPosition])
-        if (mediaPlayer == null) {
-            mediaPlayer = MediaPlayer()
+        if (playlist == null){return}
+        if (playlist!!.songs.size == 0){return}
+        val file = File(playlist!!.songs[playlistPosition])
+        mediaPlayer = if (mediaPlayer == null) {
+            MediaPlayer()
         } else {
             mediaPlayer!!.release()
-            mediaPlayer = MediaPlayer()
+            MediaPlayer()
         }
         mediaPlayer?.setDataSource(file.path)
         mediaPlayer?.prepare()
 
         val mmr = MediaMetadataRetriever()
-        SongName = file.name
-        val artists = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_AUTHOR)
+        mmr.setDataSource(file.path) // not knowing this caused many problems
+        SongName = file.nameWithoutExtension
+        val artists = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)
         ArtistName = when (artists){
             null -> "Unknown"
             else -> artists
+        }
+        AlbumArtBitMap = if (mmr.embeddedPicture != null) {BitmapFactory.decodeByteArray(mmr.embeddedPicture, 0, mmr.embeddedPicture!!.size)} else {null}
+        mediaPlayer!!.setOnCompletionListener{
+            skipNext()
+
         }
     }
 
@@ -90,10 +105,11 @@ object MediaManager {
     }
 
     fun skipNext(){
+        if (playlist == null){return}
         playlistPosition += 1
-        if (playlistPosition >= playlist.songs.size){
+        if (playlistPosition >= playlist!!.songs.size){
             if (!looping) {
-                playlistPosition = playlist.songs.size - 1
+                playlistPosition = playlist!!.songs.size - 1
             } else {
                 playlistPosition = 0
                 pause()
@@ -109,23 +125,22 @@ object MediaManager {
     }
 
     fun skipLast(){
+        if (playlist == null){return}
         playlistPosition -= 1
         if (playlistPosition < 0) {
             if (!looping){
                 playlistPosition = 0
                 mediaPlayer?.seekTo(0)
             } else {
-                playlistPosition = playlist.songs.size - 1
+                playlistPosition = playlist!!.songs.size - 1
                 pause()
                 loadPlaylistTrack()
                 play()
             }
         } else if (trackPosition > 30_000) {
-            Log.d("did", "correct")
             mediaPlayer?.seekTo(0)
             playlistPosition += 1
         } else {
-            Log.d("wroing", "bad")
             pause()
             loadPlaylistTrack()
             play()
@@ -145,7 +160,7 @@ object MediaManager {
         val title = playlistFile.nameWithoutExtension
         var lines = playlistFile.readLines()
         var songs = Vector<String>()
-        var playlistArt: String? = null
+        var playlistArtPath: String? = null
         lines.forEach { line ->
             line.replace("\n","")
             if (File(localStorage?.absolutePath, line).isFile){
@@ -153,23 +168,51 @@ object MediaManager {
             } else if (File(sdCardStorage?.absolutePath, line).isFile) {
                 songs.add(sdCardStorage?.absolutePath+"/"+line)
             } else if (line.startsWith("#EXTIMG")){
-                playlistArt = line.replace("#EXTIMG: ", "")
+                playlistArtPath = line.replace("#EXTIMG: ", "")
+                playlistArtPath = "${ sdCardStorage }/Thumbnails/${playlistArtPath}"
             }
         }
-        return Playlist(title, playlistArt, songs, songs.size)
+        return Playlist(title, playlistArtPath, songs, songs.size)
+    }
+
+    fun quick_read_m3u(path: String, storage:String): Playlist{
+        var playlistFile: File? = null
+        var playlistArtPath:String? = null
+        try {
+            playlistFile = File(path)
+            playlistFile.readLines().forEach { line ->
+                line.replace("\n","")
+                if (line.startsWith("#EXTIMG")){
+                    playlistArtPath = line.replace("#EXTIMG: ", "")
+                    playlistArtPath = "${ storage }/Thumbnails/${playlistArtPath}"
+                }
+            }
+
+        } catch(e:FileNotFoundException){
+
+        } finally {
+            val title = playlistFile!!.nameWithoutExtension
+            return Playlist(title, playlistArtPath, Vector<String>(), 0)
+        }
     }
 
     fun kill(){
+        pause()
         mediaPlayer?.release()
     }
 }
-
 
 private class MediaFunctions {
     fun getStorageDirectories(context: Context){
         val externalStorageVolumes: Array<File?> = ContextCompat.getExternalFilesDirs(context, null)
         val localStorage = externalStorageVolumes[0] // should be primary / local storage
         val sdCardStorage = externalStorageVolumes[1] // should be sd card
+        StorageLocations.values().size
+    }
+
+    private enum class StorageLocations{
+        Internal,
+        SDCard
     }
 }
 
