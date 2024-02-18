@@ -12,6 +12,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.media.AudioManager
 import android.media.MediaPlayer
 import android.media.session.MediaSession
 import android.os.Build
@@ -103,16 +104,7 @@ class MainActivity : ComponentActivity() {
 
         setContentView(R.layout.music_controls)
 
-        try {
-            val mediaPlayer = MediaManager.mediaPlayer!!
-            mediaPlayer.setOnCompletionListener {
-                MediaManager.skipNext()
-                updateSongInfo()
-                Intent(this, MusicService::class.java).also { it.action = MusicService.Actions.UPDATE.toString(); startService(it) }
-            }
-        } catch(e: NullPointerException) {
-
-        }
+        updateSongInfoRecursive()
 
         receiver = object : BroadcastReceiver() {
             override fun onReceive(p0: Context?, p1: Intent?) {
@@ -154,6 +146,8 @@ class MainActivity : ComponentActivity() {
 
         updateSongInfo()
 
+        SongNameTexView.isSelected = true
+
         SongSeekBar.setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener{
             override fun onProgressChanged(p0: SeekBar?, progress: Int, fromUser: Boolean) {
                 CurrentSongPosText.text = "${MilliSecsToMins(progress)}"
@@ -182,6 +176,7 @@ class MainActivity : ComponentActivity() {
                 try {
                     SongSeekBar.progress = MediaManager.mediaPlayer?.currentPosition ?: 0
                     SongSeekBar.postDelayed(this, 1000)
+//                    updateSongInfoRecursive()
                 } catch (e:IllegalStateException) {
                     // this just happens when the app swaps activity
                     // this is because the media player is released causing the top call in the try block to access a variable that doesn't exist
@@ -297,10 +292,25 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun updateSongInfoRecursive(){
+        try {
+            val mediaPlayer = MediaManager.mediaPlayer!!
+            mediaPlayer.setOnCompletionListener {
+                MediaManager.skipNext()
+                updateSongInfo()
+                Intent(this, MusicService::class.java).also { it.action = MusicService.Actions.UPDATE.toString(); startService(it) }
+                updateSongInfoRecursive()
+            }
+        } catch(e: NullPointerException) {
+
+        }
+    }
+
     private fun onSkipNext(button: ImageButton){
         button.setOnClickListener {
             MediaManager.skipNext()
             updateSongInfo()
+            Intent(this, MusicService::class.java).also { it.action = MusicService.Actions.UPDATE.toString(); startService(it) }
         }
     }
 
@@ -308,6 +318,7 @@ class MainActivity : ComponentActivity() {
         button.setOnClickListener {
             MediaManager.skipLast()
             updateSongInfo()
+            Intent(this, MusicService::class.java).also { it.action = MusicService.Actions.UPDATE.toString(); startService(it) }
         }
 
     }
@@ -330,6 +341,8 @@ class MainActivity : ComponentActivity() {
             if (MediaManager.isPaused) {
                 button.setImageResource(R.drawable.play_button)
                 MediaManager.pause()
+                Intent(this, MusicService::class.java).also { it.action = MusicService.Actions.UNREGISTER.toString(); startService(it) }
+                Intent(this, MusicService::class.java).also{ it.action = MusicService.Actions.START.toString();startService(it) }
                 Intent(this, MusicService::class.java).also {it.action = MusicService.Actions.PLAYING.toString(); startService(it)}
             } else {
                 Log.d("play","button")
@@ -344,14 +357,23 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun onShuffle(button: ImageButton){
-        if (MediaManager.Shuffled) {
+
+        if (MediaManager.playlist == null){return}
+
+        if (MediaManager.shuffled) {
             button.setColorFilter(R.color.banana)
         } else {
             button.setColorFilter(null)
         }
         button.setOnClickListener{
-            MediaManager.Shuffled = !MediaManager.Shuffled
-            if (MediaManager.Shuffled) {
+            MediaManager.toggleShuffle()
+            MediaManager.loadPlaylistTrack()
+            MediaManager.play()
+            updateSongInfo()
+            Intent(this, MusicService::class.java).also { it.action = MusicService.Actions.UNREGISTER.toString(); startService(it) }
+            Intent(this, MusicService::class.java).also{ it.action = MusicService.Actions.START.toString();startService(it) }
+            Intent(this, MusicService::class.java).also { it.action = MusicService.Actions.PAUSED.toString(); startService(it) }
+            if (MediaManager.shuffled) {
                 button.setColorFilter(R.color.banana)
             } else {
                 button.setColorFilter(null)
@@ -392,6 +414,8 @@ class MainActivity : ComponentActivity() {
         Log.d("paws", "pawsed")
 //        unregisterReceiver(receiver)
     }
+
+
 
     override fun onDestroy() {
         super.onDestroy()

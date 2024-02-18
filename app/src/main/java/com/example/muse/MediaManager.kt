@@ -6,17 +6,20 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.media.AudioManager
 import android.media.MediaMetadataRetriever
 import android.media.MediaPlayer
 import android.os.Environment
 import android.util.Log
 import android.view.View
 import androidx.core.content.ContextCompat
+import androidx.core.content.ContextCompat.getSystemService
 import androidx.core.content.ContextCompat.registerReceiver
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.util.Vector
+import java.util.Collections
 
 data class Playlist(val title: String, val coverPath: String?, val songs: Vector<String>, val size:Int)
 
@@ -25,17 +28,17 @@ object MediaManager {
     var mediaPlayer: MediaPlayer? = null
     var playlistPosition: Int = 0
     var isPaused = true
-    var Shuffled = false
+    var shuffled = false
     var looping = false
 
     var trackPosition: Int = 0
 
     var playlist: Playlist? = null
+    lateinit var songs : Vector<String>
 
     lateinit var SongName : String
     lateinit var ArtistName : String
     var AlbumArtBitMap : Bitmap? = null
-
 
 
     fun loadTrack(path: String){
@@ -63,13 +66,22 @@ object MediaManager {
     fun loadPlaylist(list:Playlist){
         playlistPosition = 0
         playlist = list
+        songs = list.songs
+        shuffled = false
         isPaused = true
+    }
+
+    fun loadPlaylistPosition(pos:Int){
+        pause()
+        playlistPosition = pos
+        loadPlaylistTrack()
+        play()
     }
 
     fun loadPlaylistTrack(){
         if (playlist == null){return}
         if (playlist!!.songs.size == 0){return}
-        val file = File(playlist!!.songs[playlistPosition])
+        val file = File(songs!![playlistPosition])
         mediaPlayer = if (mediaPlayer == null) {
             MediaPlayer()
         } else {
@@ -193,6 +205,24 @@ object MediaManager {
         } finally {
             val title = playlistFile!!.nameWithoutExtension
             return Playlist(title, playlistArtPath, Vector<String>(), 0)
+        }
+    }
+
+    fun generateShuffledList(songList:Vector<String>) : Vector<String>{
+        val shuffledList = Vector<String>(songList)
+        shuffledList.shuffle()
+        return shuffledList as Vector<String>
+    }
+
+    fun toggleShuffle(){
+        if (playlist == null){return}
+        playlistPosition = 0
+        shuffled = !shuffled
+        songs = if (shuffled){
+            generateShuffledList(playlist!!.songs)
+
+        } else {
+            playlist?.songs!!
         }
     }
 

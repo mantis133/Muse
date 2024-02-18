@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
 import android.media.MediaMetadata
+import android.media.session.MediaController
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
 import android.os.Build
@@ -17,6 +18,7 @@ import android.util.Log
 class MusicService : Service() {
 
     private lateinit var receiver: BroadcastReceiver
+    private lateinit var headphoneReceiver: BroadcastReceiver
     private lateinit var notification: Notification
     private val TAG = "MUSIC_SERVICE"
 
@@ -27,6 +29,7 @@ class MusicService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             Actions.START.toString() -> {
+
                 start()
             }
             Actions.STOP.toString() -> {
@@ -36,6 +39,9 @@ class MusicService : Service() {
                 try {
                     unregisterReceiver(receiver)
                 } catch(e:UninitializedPropertyAccessException){ /* triggers when the receiver is already registered */ }
+//                try {
+//                    unregisterReceiver(headphoneReceiver)
+//                } catch(e:UninitializedPropertyAccessException){}
             }
             Actions.PAUSED.toString() -> {
 //                Intent("com.muse.ACTION_pause_play").also { sendBroadcast(it) }
@@ -48,8 +54,12 @@ class MusicService : Service() {
                 setPlayIcon(1)
             }
             Actions.UPDATE.toString() -> {
-                notification = updateNotifInfo()
-                startForeService()
+                try {
+                    notification = updateNotifInfo()
+                    startForeService()
+                } catch (e:UninitializedPropertyAccessException){
+
+                }
             }
         }
 
@@ -59,9 +69,12 @@ class MusicService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         unregisterReceiver(receiver)
+//        unregisterReceiver(headphoneReceiver)
     }
 
     private fun start(){
+        if (MediaManager.playlist == null){return}
+
         registerBroadcastReceiver()
 
         val mediaSession = buildMediaSession()
@@ -69,6 +82,8 @@ class MusicService : Service() {
         notification = updateNotifInfo()
 
         startForeService()
+
+        updateNotifInfoRecursive()
 
     }
 
@@ -81,15 +96,35 @@ class MusicService : Service() {
         UPDATE
     }
 
+    private fun updateNotifInfoRecursive(){
+        try {
+            val mediaPlayer = MediaManager.mediaPlayer!!
+            mediaPlayer.setOnCompletionListener {
+                MediaManager.skipNext()
+                notification = updateNotifInfo()
+                startForeService()
+                updateNotifInfoRecursive()
+            }
+        } catch(e: NullPointerException) {
+
+        }
+    }
+
     private fun registerBroadcastReceiver(){
         receiver = BroadcastTransiver()
+        headphoneReceiver = HeadphoneReceiver()
         val filter = IntentFilter().apply {
             addAction("com.muse.ACTION_pause_play")
             addAction("com.muse.ACTION_next")
             addAction("com.muse.ACTION_last")
+//            addAction(Intent.ACTION_HEADSET_PLUG) // add back when you know what you are doing
         }
+        val headphoneFilter = IntentFilter().apply {
+            addAction(Intent.ACTION_HEADSET_PLUG)
 
+        }
         registerReceiver(receiver,filter)
+//        registerReceiver(headphoneReceiver,headphoneFilter)
     }
 
     private fun buildMediaSession() : MediaSession {
@@ -108,6 +143,8 @@ class MusicService : Service() {
         // Start the Media Session since the activity is active
         mediaSession.isActive = true
 
+//        val controller = MediaController(this, mediaSession.sessionToken)
+
         val metadataBuilder = MediaMetadata.Builder()
         metadataBuilder.putString(MediaMetadata.METADATA_KEY_TITLE, "fck")
         metadataBuilder.putString(MediaMetadata.METADATA_KEY_ARTIST, "Artist Title")
@@ -118,6 +155,8 @@ class MusicService : Service() {
     }
 
     private fun updateNotifInfo() : Notification{
+
+        val mediaSession = buildMediaSession()
 
         val mediaStyle = Notification.MediaStyle()
 
@@ -159,7 +198,7 @@ class MusicService : Service() {
             .setStyle(mediaStyle)
 
             .setVisibility(Notification.VISIBILITY_PUBLIC)
-            .setSmallIcon(R.drawable.home_icon)
+            .setSmallIcon(R.drawable.home_icon_circle)
             .setLargeIcon(MediaManager.AlbumArtBitMap)
             .setContentTitle(MediaManager.SongName)
             .setContentText(MediaManager.ArtistName)
@@ -223,5 +262,11 @@ private class AccessoriesFunctions : MediaSession.Callback() { // need to replac
         super.onSkipToPrevious()
         Log.d("last","last")
         MediaManager.skipLast()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        Log.d("Stop","stop")
+        MediaManager.pause()
     }
 }
