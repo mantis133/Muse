@@ -104,7 +104,7 @@ class MainActivity : ComponentActivity() {
 
         setContentView(R.layout.music_controls)
 
-        updateSongInfoRecursive()
+//        updateSongInfoRecursive()
 
         receiver = object : BroadcastReceiver() {
             override fun onReceive(p0: Context?, p1: Intent?) {

@@ -103,11 +103,10 @@ class MusicService : Service() {
                 MediaManager.skipNext()
                 notification = updateNotifInfo()
                 startForeService()
+                val mediaSession = buildMediaSession()
                 updateNotifInfoRecursive()
             }
-        } catch(e: NullPointerException) {
-
-        }
+        } catch(e: NullPointerException) { }
     }
 
     private fun registerBroadcastReceiver(){
