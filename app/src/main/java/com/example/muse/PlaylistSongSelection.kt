@@ -1,5 +1,6 @@
 package com.example.muse
 
+import android.content.ComponentName
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
@@ -12,15 +13,22 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.ComponentActivity
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import com.google.common.util.concurrent.MoreExecutors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.lang.IllegalStateException
 
 private data class PlaylistPosition(val pos: Int)
 
 class PlaylistSongSelection : ComponentActivity() {
+    val context = this
     override fun onCreate(savedInstanceState: Bundle?){
         super.onCreate(savedInstanceState)
 
@@ -31,7 +39,7 @@ class PlaylistSongSelection : ComponentActivity() {
 
         if (MediaManager.songs == null){val nothing = TextView(this);nothing.text = "No Playlist is loaded"; nothing.textSize = 30f; nothing.textAlignment = TextView.TEXT_ALIGNMENT_CENTER; nothing.setTextColor(resources.getColor(R.color.black)); bigContainer.addView(nothing);return}
 
-        val songList = MediaManager.songs!!
+        val songList = MediaManager.songs
 
         val scroll = ScrollView(this)
         scroll.isVerticalScrollBarEnabled = false
@@ -41,30 +49,13 @@ class PlaylistSongSelection : ComponentActivity() {
         val host = LinearLayout(this)
         host.orientation = LinearLayout.VERTICAL
         scroll.addView(host)
-        val context = this
 
         GlobalScope.launch(Dispatchers.IO){
             for (i in 0 until songList.size) {
                 var song = songList[i]
-                val file = File(song)
-                val mmr = MediaMetadataRetriever()
-                mmr.setDataSource(file.path) // not knowing this caused many problems
-                val name = file.nameWithoutExtension
-                var artist = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)
-                artist = when (artist) {
-                    null -> "Unknown"
-                    else -> artist
-                }
-                val img = if (mmr.embeddedPicture != null) {
-                    BitmapFactory.decodeByteArray(
-                        mmr.embeddedPicture,
-                        0,
-                        mmr.embeddedPicture!!.size
-                    )
-                } else {
-                    null
-                }
-
+                val name = song.name
+                val artist = song.artists
+                val img = song.albumCover
                 val container = LinearLayout(context)
                 container.orientation = LinearLayout.HORIZONTAL
                 if (MediaManager.playlistPosition == i) {
@@ -76,11 +67,16 @@ class PlaylistSongSelection : ComponentActivity() {
                 } else {
                     container.setOnClickListener {
                         Log.d("some", "$i")
-                        MediaManager.loadPlaylistPosition(i) // ERROR: Array index overflowing past
+                        val sessionToken = SessionToken(context, ComponentName(context, PlaybackService::class.java))
+                        val controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
+                        controllerFuture.addListener(
+                            {
+                                val con = controllerFuture.get()
+                                MediaManager.loadTrack(i)
+                                con.seekTo(i, 0)
+                            },
+                            MoreExecutors.directExecutor())
                         Intent(context, MainActivity::class.java).also { startActivity(it) }
-                        Intent(context, MusicService::class.java).also { it.action = MusicService.Actions.UNREGISTER.toString(); startService(it) }
-                        Intent(context, MusicService::class.java).also{ it.action = MusicService.Actions.START.toString();startService(it) }
-                        Intent(context, MusicService::class.java).also { it.action = MusicService.Actions.PAUSED.toString(); startService(it) }
                         overridePendingTransition(R.anim.enter_from_right,R.anim.exit_to_left)
                     }
                 }
@@ -137,9 +133,5 @@ class PlaylistSongSelection : ComponentActivity() {
             startActivity(i)
             overridePendingTransition(R.anim.enter_from_right,R.anim.exit_to_left)
         }
-    }
-
-    fun sticksAndStones(pos:Int) : Int{
-        return pos
     }
 }

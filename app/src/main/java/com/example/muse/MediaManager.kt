@@ -1,234 +1,192 @@
 package com.example.muse
 
-import android.app.PendingIntent
+
 import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.media.AudioManager
 import android.media.MediaMetadataRetriever
-import android.media.MediaPlayer
-import android.os.Environment
-import android.util.Log
-import android.view.View
 import androidx.core.content.ContextCompat
-import androidx.core.content.ContextCompat.getSystemService
-import androidx.core.content.ContextCompat.registerReceiver
+import androidx.media3.common.Player
+import androidx.media3.session.MediaController
+import com.example.muse.util.Song
+import com.example.muse.util.Playlist
 import java.io.File
-import java.io.FileNotFoundException
-import java.io.IOException
+import java.lang.IndexOutOfBoundsException
 import java.util.Vector
-import java.util.Collections
 
-data class Playlist(val title: String, val coverPath: String?, val songs: Vector<String>, val size:Int)
 
 object MediaManager {
     val playlistLocation = "Playlists"
-    var mediaPlayer: MediaPlayer? = null
     var playlistPosition: Int = 0
     var isPaused = true
     var shuffled = false
-    var looping = false
-
-    var trackPosition: Int = 0
+    var looping = 0
 
     var playlist: Playlist? = null
-    lateinit var songs : Vector<String>
+    var shuffledPlaylist : Playlist? = null
+    lateinit var songs : List<Song>
 
     lateinit var SongName : String
     lateinit var ArtistName : String
     var AlbumArtBitMap : Bitmap? = null
 
+    fun initialize(controller: MediaController){
+        isPaused = !controller.isPlaying
+        shuffled = false
+        looping = controller.repeatMode
+//        0 : Player.REPEAT_MODE_OFF : does not loop the list
+//        1 : Player.REPEAT_MODE_ONE : repeats the current item indefinitely, prev and next still go to different items as in 0
+//        2 : Player.REPEAT_MODE_ALL : repeats the whole list indefinitely, prev and next use moduli as expected
+        loadTrack(controller.currentMediaItemIndex)
+    }
 
-    fun loadTrack(path: String){
-        val location = Environment.getExternalStorageDirectory().absolutePath
+    fun loadTrack(song: Song){
+        SongName = song.name
+        ArtistName = song.artists
+        AlbumArtBitMap = song.albumCover
+    }
 
-        val file = File(location, path)
-        if (mediaPlayer == null) {
-            mediaPlayer = MediaPlayer()
-        } else {
-            mediaPlayer!!.release()
-            mediaPlayer = MediaPlayer()
-        }
-        mediaPlayer?.setDataSource(file.path)
-        mediaPlayer?.prepare()
-
-        val mmr = MediaMetadataRetriever()
-        SongName = File(path).name
-        val artists =mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_AUTHOR)
-        ArtistName = when (artists){
-            null -> "Unknown"
-            else -> artists
+    fun loadTrack(playlist_position: Int) : Boolean{
+        return try {
+            loadTrack(songs.get(playlist_position))
+            true
+        } catch(e: IndexOutOfBoundsException){
+            false
+        } catch (e: UninitializedPropertyAccessException){
+            false
         }
     }
 
     fun loadPlaylist(list:Playlist){
-        playlistPosition = 0
         playlist = list
+        setSongs(list)
+    }
+
+    private fun setSongs(list:Playlist){
         songs = list.songs
-        shuffled = false
-        isPaused = true
     }
 
     fun loadPlaylistPosition(pos:Int){
-        pause()
-        playlistPosition = pos
-        loadPlaylistTrack()
-        play()
+//        pause()
+//        playlistPosition = pos
+//        loadPlaylistTrack()
+//        play()
     }
 
     fun loadPlaylistTrack(){
-        if (playlist == null){return}
-        if (playlist!!.songs.size == 0){return}
-        val file = File(songs!![playlistPosition])
-        mediaPlayer = if (mediaPlayer == null) {
-            MediaPlayer()
-        } else {
-            mediaPlayer!!.release()
-            MediaPlayer()
-        }
-        mediaPlayer?.setDataSource(file.path)
-        mediaPlayer?.prepare()
+//        if (playlist == null){return}
+//        if (playlist!!.songs.size == 0){return}
+//        val file = File(songs[playlistPosition])
+//        mediaPlayer = if (mediaPlayer == null) {
+//            MediaPlayer()
+//        } else {
+//            mediaPlayer!!.release()
+//            MediaPlayer()
+//        }
+//        mediaPlayer?.setDataSource(file.path)
+//        mediaPlayer?.prepare()
+//
+//        val mmr = MediaMetadataRetriever()
+//        mmr.setDataSource(file.path) // not knowing this caused many problems
+//        SongName = file.nameWithoutExtension
+//        val artists = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)
+//        ArtistName = when (artists){
+//            null -> "Unknown"
+//            else -> artists
+//        }
+//        AlbumArtBitMap = if (mmr.embeddedPicture != null) {BitmapFactory.decodeByteArray(mmr.embeddedPicture, 0, mmr.embeddedPicture!!.size)} else {null}
+//
+    }
 
+
+    fun buildSongFromFile(file: File) : Song{
         val mmr = MediaMetadataRetriever()
-        mmr.setDataSource(file.path) // not knowing this caused many problems
-        SongName = file.nameWithoutExtension
-        val artists = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)
-        ArtistName = when (artists){
+        mmr.setDataSource(file.path)
+        val path = file.path
+        val name = file.nameWithoutExtension
+        val artists = when (val a = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)){
             null -> "Unknown"
-            else -> artists
+            else -> a
         }
-        AlbumArtBitMap = if (mmr.embeddedPicture != null) {BitmapFactory.decodeByteArray(mmr.embeddedPicture, 0, mmr.embeddedPicture!!.size)} else {null}
-        mediaPlayer!!.setOnCompletionListener{
-            skipNext()
+        val albumCover = if (mmr.embeddedPicture != null) {BitmapFactory.decodeByteArray(mmr.embeddedPicture, 0, mmr.embeddedPicture!!.size)} else {null}
 
-        }
+        return Song(path, name, artists, albumCover)
     }
 
-    fun play(){
-        isPaused = false
-        mediaPlayer?.start()
-    }
-
-    fun pause(){
-        isPaused = true
-        mediaPlayer?.pause()
-    }
-
-    fun skipNext(){
-        if (playlist == null){return}
-        playlistPosition += 1
-        if (playlistPosition >= playlist!!.songs.size){
-            if (!looping) {
-                playlistPosition = playlist!!.songs.size - 1
-            } else {
-                playlistPosition = 0
-                pause()
-                loadPlaylistTrack()
-                play()
-            }
-
-        } else {
-            pause()
-            loadPlaylistTrack()
-            play()
-        }
-    }
-
-    fun skipLast(){
-        if (playlist == null){return}
-        playlistPosition -= 1
-        if (playlistPosition < 0) {
-            if (!looping){
-                playlistPosition = 0
-                mediaPlayer?.seekTo(0)
-            } else {
-                playlistPosition = playlist!!.songs.size - 1
-                pause()
-                loadPlaylistTrack()
-                play()
-            }
-        } else if (trackPosition > 30_000) {
-            mediaPlayer?.seekTo(0)
-            playlistPosition += 1
-        } else {
-            pause()
-            loadPlaylistTrack()
-            play()
-        }
-    }
-
-    fun read_m3u(path:String, context: Context): Playlist{
-
-        val externalStorageVolumes: Array<File?> = ContextCompat.getExternalFilesDirs(context, null)
-        val localStorage = externalStorageVolumes[0] // should be primary / local storage
-        val sdCardStorage = externalStorageVolumes[1] // should be sd card
-
-        val playlistFile = File(path)
-        if (playlistFile.extension != "m3u") {
+    fun buildPlaylistFromM3UFile(file : File, storageLocation: File) : Playlist{
+        if (file.extension != "m3u") {
             throw Exception("not a playlist file")
         }
-        val title = playlistFile.nameWithoutExtension
-        var lines = playlistFile.readLines()
-        var songs = Vector<String>()
-        var playlistArtPath: String? = null
-        lines.forEach { line ->
+
+        val path = file.path
+        val title = file.nameWithoutExtension
+        var cover : Bitmap? = null
+        val songs = Vector<Song>()
+        var size = 0
+
+        file.readLines().forEach { line ->
             line.replace("\n","")
-            if (File(localStorage?.absolutePath, line).isFile){
-                songs.add(localStorage?.absolutePath+"/"+line)
-            } else if (File(sdCardStorage?.absolutePath, line).isFile) {
-                songs.add(sdCardStorage?.absolutePath+"/"+line)
+            if (File(storageLocation.absolutePath, line).isFile){
+                songs.add(buildSongFromFile(File(storageLocation.absolutePath + "/" + line)))
+                size++
             } else if (line.startsWith("#EXTIMG")){
-                playlistArtPath = line.replace("#EXTIMG: ", "")
-                playlistArtPath = "${ sdCardStorage }/Thumbnails/${playlistArtPath}"
+                val playlistArtPath = line.replace("#EXTIMG: ", "")
+                cover = BitmapFactory.decodeFile("${ storageLocation }/Thumbnails/${playlistArtPath}")
             }
         }
-        return Playlist(title, playlistArtPath, songs, songs.size)
+
+        return Playlist(path, title, cover, songs.toList(), size)
     }
 
-    fun quick_read_m3u(path: String, storage:String): Playlist{
-        var playlistFile: File? = null
-        var playlistArtPath:String? = null
-        try {
-            playlistFile = File(path)
-            playlistFile.readLines().forEach { line ->
+    fun quickBuildPlaylistFromM3UFile(file: File, storageLocation: File) : Playlist{
+        if (file.extension != "m3u") {
+            throw Exception("not a playlist file")
+        }
+
+        val path = file.path
+        val title = file.nameWithoutExtension
+        var cover : Bitmap? = null
+        val songs = Vector<Song>()
+        val size = 0
+
+        run runLabel@ {
+            file.readLines().forEach { line ->
                 line.replace("\n","")
                 if (line.startsWith("#EXTIMG")){
-                    playlistArtPath = line.replace("#EXTIMG: ", "")
-                    playlistArtPath = "${ storage }/Thumbnails/${playlistArtPath}"
+                    val playlistArtPath = line.replace("#EXTIMG: ", "")
+                    cover = BitmapFactory.decodeFile("${ storageLocation }/Thumbnails/${playlistArtPath}")
+                    return@runLabel
                 }
             }
-
-        } catch(e:FileNotFoundException){
-
-        } finally {
-            val title = playlistFile!!.nameWithoutExtension
-            return Playlist(title, playlistArtPath, Vector<String>(), 0)
         }
+        return Playlist(path, title, cover, songs.toList(), size)
     }
 
-    fun generateShuffledList(songList:Vector<String>) : Vector<String>{
-        val shuffledList = Vector<String>(songList)
+    fun loadPlaylistIntoMediaSession(playlist : List<Song>, controller: MediaController) : Boolean{
+        for (song in playlist){
+            controller.addMediaItem(song.intoMediaItem())
+        }
+        return true
+    }
+
+    fun generateShuffledList(songList:List<Song>) : List<Song>{
+        val shuffledList = songList.toMutableList()
         shuffledList.shuffle()
-        return shuffledList as Vector<String>
+        return shuffledList
     }
 
-    fun toggleShuffle(){
-        if (playlist == null){return}
-        playlistPosition = 0
+    fun toggleShuffle(controller : MediaController){
+        if (playlist == null){return} // find a throw later
         shuffled = !shuffled
         songs = if (shuffled){
             generateShuffledList(playlist!!.songs)
-
         } else {
             playlist?.songs!!
         }
-    }
+        if (loadPlaylistIntoMediaSession(songs, controller)){
+            controller.prepare()
+        }
 
-    fun kill(){
-        pause()
-        mediaPlayer?.release()
     }
 }
 
@@ -247,30 +205,3 @@ private class MediaFunctions {
 }
 
 
-
-//private fun playAudio(view: View){
-//    mediaPlayer?.start()
-//}
-//
-//private fun pauseAudio(view: View){
-//    if (mediaPlayer?.isPlaying == true) {
-//        mediaPlayer?.pause()
-//    }
-//}
-//
-//private fun loadPlayer(Playlist: Array<String>){
-//    var filepaths = arrayOf(
-//        "/sdcard/Music/Bust Your Knee Caps (Johnny Don't Leave Me) - Pomplamoose.mp3",
-//        "/sdcard/Music/Faith Marie - Toxic Thoughts.mp3",
-//        "/sdcard/Music/The Jolly Rogers - XXV_ The Flying Dutchman.mp3"
-//    )
-//
-//    mediaPlayer = MediaPlayer().apply{
-//        try {
-//            setDataSource(filepaths[currPos%3])
-//            prepare()
-//        } catch (e:IOException) {
-//            e.printStackTrace()
-//        }
-//    }
-//}
