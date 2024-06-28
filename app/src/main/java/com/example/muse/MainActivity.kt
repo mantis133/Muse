@@ -291,7 +291,7 @@ class MainActivity : ComponentActivity() {
     private fun onSkipLast(button: ImageButton){
         button.setOnClickListener {
             updateSongInfoUI()
-            con.seekToNextMediaItem()
+            con.seekToPreviousMediaItem()
             Log.d("TEST SESSION", con.currentPosition.toString())
             Log.d("TEST SESSION", con.currentPosition.toInt().toString())
             Log.d("TEST SESSION", con.duration.toString())
