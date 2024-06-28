@@ -316,7 +316,7 @@ class MainActivity : ComponentActivity() {
             button.setColorFilter(null)
         }
         button.setOnClickListener{
-            MediaManager.shuffled = !MediaManager.shuffled
+            MediaManager.toggleShuffle(con)
             if (MediaManager.shuffled) {
                 button.setColorFilter(R.color.banana)
             } else {

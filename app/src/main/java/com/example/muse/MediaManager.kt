@@ -66,38 +66,6 @@ object MediaManager {
         songs = list.songs
     }
 
-    fun loadPlaylistPosition(pos:Int){
-//        pause()
-//        playlistPosition = pos
-//        loadPlaylistTrack()
-//        play()
-    }
-
-    fun loadPlaylistTrack(){
-//        if (playlist == null){return}
-//        if (playlist!!.songs.size == 0){return}
-//        val file = File(songs[playlistPosition])
-//        mediaPlayer = if (mediaPlayer == null) {
-//            MediaPlayer()
-//        } else {
-//            mediaPlayer!!.release()
-//            MediaPlayer()
-//        }
-//        mediaPlayer?.setDataSource(file.path)
-//        mediaPlayer?.prepare()
-//
-//        val mmr = MediaMetadataRetriever()
-//        mmr.setDataSource(file.path) // not knowing this caused many problems
-//        SongName = file.nameWithoutExtension
-//        val artists = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)
-//        ArtistName = when (artists){
-//            null -> "Unknown"
-//            else -> artists
-//        }
-//        AlbumArtBitMap = if (mmr.embeddedPicture != null) {BitmapFactory.decodeByteArray(mmr.embeddedPicture, 0, mmr.embeddedPicture!!.size)} else {null}
-//
-    }
-
 
     fun buildSongFromFile(file: File) : Song{
         val mmr = MediaMetadataRetriever()
@@ -163,6 +131,7 @@ object MediaManager {
     }
 
     fun loadPlaylistIntoMediaSession(playlist : List<Song>, controller: MediaController) : Boolean{
+        controller.clearMediaItems()
         for (song in playlist){
             controller.addMediaItem(song.intoMediaItem())
         }
