@@ -1,6 +1,7 @@
 package com.example.muse
 
 
+import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
@@ -14,6 +15,7 @@ import android.widget.ImageView
 import android.widget.SeekBar
 import android.widget.TextView
 import androidx.activity.ComponentActivity
+import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -325,21 +327,30 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    @SuppressLint("ResourceAsColor")
     private fun onLoop(button: ImageButton){
-//        if (MediaManager.looping) {
-//            button.setColorFilter(R.color.banana)
-//        } else {
-//            button.setColorFilter(null)
-//        }
-//        button.setOnClickListener {
-//            MediaManager.looping = !MediaManager.looping
-//            if (MediaManager.looping) {
-//                button.setColorFilter(R.color.banana)
-//            } else {
-//                button.setColorFilter(null)
-////                button.setColorFilter(R.color.darker_yellow)
-//            }
-//        }
+        when (MediaManager.looping){
+            0 -> button.setColorFilter(R.color.black)
+            1 -> button.setColorFilter(R.color.banana)
+            2 -> button.setColorFilter(R.color.teal_200)
+            else -> button.setColorFilter(null)
+        }
+        button.setOnClickListener {
+            MediaManager.looping = (MediaManager.looping + 1) % 3
+            when (MediaManager.looping){
+                0 -> button.setImageResource(R.drawable.loop_icon)
+                1 -> {
+//                    button.setColorFilter(null)
+////                    button.setColorFilter(R.color.banana)
+                    button.setImageResource(R.drawable.shuffle_icon)
+                }
+                2 -> {
+//                    button.setColorFilter(null)
+                    button.setColorFilter(R.color.teal_200)
+                }
+                else -> button.setColorFilter(null)
+            }
+        }
     }
 
     override fun onResume() { // think this is when the activity regains focus

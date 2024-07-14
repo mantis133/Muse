@@ -35,6 +35,8 @@ import com.example.muse.ui.theme.MuseTheme
 import com.example.muse.util.Playlist
 import com.google.common.util.concurrent.MoreExecutors
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.Vector
@@ -95,16 +97,19 @@ class SongSelection : ComponentActivity() {
 
                 linearLayout.setOnClickListener {
                     Log.d("click ", "click")
-//                    val mediaPlayer = Intent(this@SongSelection, MainActivity::class.java)
-//                    startActivity(mediaPlayer)
-                    val list = MediaManager.buildPlaylistFromM3UFile(file, sdCardStorage)
-                    MediaManager.loadPlaylist(list)
-                    MediaManager.initialize(con) // con should exist by the point this is clicked ???
-                    val l = list.songs.get(0)
-
-                    if (MediaManager.loadPlaylistIntoMediaSession(list.songs, con)){
-                        con.prepare()
-                    }
+                    val mediaPlayer = Intent(this@SongSelection, MainActivity::class.java)
+                    startActivity(mediaPlayer)
+//                    GlobalScope.launch(Dispatchers.IO) {
+                        val list = MediaManager.buildPlaylistFromM3UFile(file, sdCardStorage)
+                        MediaManager.loadPlaylist(list)
+//                        val l = list.songs.get(0)
+//                        withContext(Dispatchers.Main){
+                            MediaManager.initialize(con) // con should exist by the point this is clicked ???
+                            if (MediaManager.loadPlaylistIntoMediaSession(list.songs, con)) {
+                                con.prepare()
+                            }
+//                        }
+//                    }
                 }
 
                 val maxSize = Math.min(screenWidth,screenHeight)
