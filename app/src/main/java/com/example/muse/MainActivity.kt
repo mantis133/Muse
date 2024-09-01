@@ -27,6 +27,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import java.lang.IllegalStateException
 import java.io.File
+import java.lang.NullPointerException
 
 
 class MainActivity : ComponentActivity() {
@@ -331,25 +332,23 @@ class MainActivity : ComponentActivity() {
 
     @SuppressLint("ResourceAsColor")
     private fun onLoop(button: ImageButton){
-        when (MediaManager.looping){
-            0 -> button.setColorFilter(R.color.black)
-            1 -> button.setColorFilter(R.color.banana)
-            2 -> button.setColorFilter(R.color.teal_200)
-            else -> button.setColorFilter(null)
-        }
+//        when (MediaManager.looping){
+//            0 -> button.setColorFilter(R.color.black)
+//            1 -> button.setColorFilter(R.color.banana)
+//            2 -> button.setColorFilter(R.color.teal_200)
+//            else -> button.setColorFilter(null)
+//        }
         button.setOnClickListener {
             MediaManager.looping = (MediaManager.looping + 1) % 3
+            try{
+                con.repeatMode = (con.repeatMode + 1) % 3
+            } catch (e: UninitializedPropertyAccessException) {
+                Log.d("EXCEPTION", "Tryed to loop without a media instance")
+            }
             when (MediaManager.looping){
-                0 -> button.setImageResource(R.drawable.loop_icon)
-                1 -> {
-//                    button.setColorFilter(null)
-////                    button.setColorFilter(R.color.banana)
-                    button.setImageResource(R.drawable.shuffle_icon)
-                }
-                2 -> {
-//                    button.setColorFilter(null)
-                    button.setColorFilter(R.color.teal_200)
-                }
+                0 -> button.setImageResource(R.drawable.fluent_arrow_repeat_all_20_regular32)
+                1 -> button.setImageResource(R.drawable.fluent_arrow_repeat_1_20_filled32)
+                2 -> button.setImageResource(R.drawable.fluent_arrow_repeat_all_20_filled32)
                 else -> button.setColorFilter(null)
             }
         }
