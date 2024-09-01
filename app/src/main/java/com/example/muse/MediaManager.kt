@@ -57,7 +57,7 @@ object MediaManager {
     fun loadTrack(song: Song){
         SongName = song.name
         ArtistName = song.artists
-        AlbumArtBitMap = song.albumCover
+        AlbumArtBitMap = song.getAlbumCover()
     }
 
     fun loadTrack(playlist_position: Int) : Boolean{
@@ -90,9 +90,9 @@ object MediaManager {
             null -> "Unknown"
             else -> a
         }
-        val albumCover = if (mmr.embeddedPicture != null) {BitmapFactory.decodeByteArray(mmr.embeddedPicture, 0, mmr.embeddedPicture!!.size)} else {null}
+//        val albumCover = if (mmr.embeddedPicture != null) {BitmapFactory.decodeByteArray(mmr.embeddedPicture, 0, mmr.embeddedPicture!!.size)} else {null}
 
-        return Song(path, name, artists, albumCover)
+        return Song(path, name, artists)
     }
 
     fun buildPlaylistFromM3UFile(file : File, storageLocation: File) : Playlist{

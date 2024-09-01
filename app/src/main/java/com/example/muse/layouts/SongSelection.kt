@@ -36,10 +36,10 @@ private class SongProvider : PreviewParameterProvider<Song>{
 @Composable
 fun SongCard(@PreviewParameter(SongProvider::class) song: Song){
     Row {
-        Image(
-            bitmap = song.albumCover!!.asImageBitmap(),
-            contentDescription = null
-        )
+//        Image(
+//            bitmap = song.albumCover!!.asImageBitmap(),
+//            contentDescription = null
+//        )
 //        Image(
 //            painter = painterResource(R.drawable.home_icon),
 //            contentDescription =null,

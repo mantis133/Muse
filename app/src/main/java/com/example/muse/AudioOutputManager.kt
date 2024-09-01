@@ -28,7 +28,7 @@ class HeadphoneReceiver() : BroadcastReceiver() {
 
         }
         if (BluetoothDevice.ACTION_ACL_DISCONNECTED == intent?.action){
-            val device: BluetoothDevice? = intent?.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
+            val device: BluetoothDevice? = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
             if (ActivityCompat.checkSelfPermission(
                     context,
                     Manifest.permission.BLUETOOTH_CONNECT

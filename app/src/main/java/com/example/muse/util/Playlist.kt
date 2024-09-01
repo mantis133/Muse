@@ -19,17 +19,17 @@ data class Song(
     val path : String,
     val name: String,
     val artists: String,
-    val albumCover: Bitmap?,
+//    val albumCover: Bitmap?,
 )
 {
     fun intoMediaItem() : MediaItem {
         return MediaItem.fromUri(path)
     }
-//    fun getAlbumCover() : Bitmap?{
-//        val file = File(this.path)
-//        val mmr = MediaMetadataRetriever()
-//        mmr.setDataSource(file.path)
-//        return if (mmr.embeddedPicture != null) {
-//            BitmapFactory.decodeByteArray(mmr.embeddedPicture, 0, mmr.embeddedPicture!!.size)} else {null}
-//    }
+    fun getAlbumCover() : Bitmap?{
+        val file = File(this.path)
+        val mmr = MediaMetadataRetriever()
+        mmr.setDataSource(file.path)
+        return if (mmr.embeddedPicture != null) {
+            BitmapFactory.decodeByteArray(mmr.embeddedPicture, 0, mmr.embeddedPicture!!.size)} else {null}
+    }
 }

@@ -55,7 +55,7 @@ class PlaylistSongSelection : ComponentActivity() {
                 var song = songList[i]
                 val name = song.name
                 val artist = song.artists
-                val img = song.albumCover
+                val img = song.getAlbumCover()
                 val container = LinearLayout(context)
                 container.orientation = LinearLayout.HORIZONTAL
                 if (MediaManager.playlistPosition == i) {
