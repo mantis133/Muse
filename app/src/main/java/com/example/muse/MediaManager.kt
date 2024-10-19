@@ -5,27 +5,13 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
-import android.util.Log
 import androidx.core.content.ContextCompat
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import com.example.muse.util.Song
 import com.example.muse.util.Playlist
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import java.io.File
 import java.lang.IndexOutOfBoundsException
 import java.util.Vector
-import kotlin.concurrent.thread
 
 
 
@@ -61,6 +47,7 @@ object MediaManager {
     }
 
     fun loadTrack(playlist_position: Int) : Boolean{
+        this.playlistPosition = playlist_position
         return try {
             loadTrack(songs.get(playlist_position))
             true
@@ -80,6 +67,9 @@ object MediaManager {
         songs = list.songs
     }
 
+    public fun doSongsExist() : Boolean {
+        return this::songs.isInitialized
+    }
 
     fun buildSongFromFile(file: File) : Song{
         val mmr = MediaMetadataRetriever()
@@ -149,7 +139,6 @@ object MediaManager {
         for (song in playlist){
             controller.addMediaItem(song.intoMediaItem())
         }
-//        controller.addMediaItems(playlist)
         return true
     }
 

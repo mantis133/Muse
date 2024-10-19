@@ -9,28 +9,24 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Bundle
 import android.os.PersistableBundle
-import android.provider.MediaStore.Audio.Media
 import android.util.Log
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.SeekBar
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.Player.COMMAND_PREPARE
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
-import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import java.lang.IllegalStateException
 import java.io.File
-import java.lang.NullPointerException
 
 
-class MainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity(R.layout.music_controls) {
     private lateinit var PlayButton: ImageButton
     private lateinit var NextButton : ImageButton
     private lateinit var LastButton : ImageButton
@@ -53,7 +49,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setContentView(R.layout.music_controls)
+//        setContentView(R.layout.music_controls)
 
         PlayButton = findViewById<ImageButton>(R.id.PlayButton)
         NextButton = findViewById(R.id.NextButton)
@@ -79,7 +75,7 @@ class MainActivity : ComponentActivity() {
 
         SongSeekBar.setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener{
             override fun onProgressChanged(p0: SeekBar?, progress: Int, fromUser: Boolean) {
-                CurrentSongPosText.text = "${MilliSecsToMins(progress)}"
+                CurrentSongPosText.text = MilliSecsToMins(progress)
 
                 if (fromUser) {
                     Log.d("SeekBar Update", "pos:${progress}")
@@ -268,6 +264,15 @@ class MainActivity : ComponentActivity() {
         button.setOnClickListener{
             try {
                 MediaManager.isPaused = con.isPlaying
+                // check that con is initialized -> check if con does not have a media item loaded
+                // if both of these are true then reload the playlist from the one stored in media manager
+                if (this::con.isInitialized && con.currentMediaItem == null) {
+                    if (con.isCommandAvailable(COMMAND_PREPARE)){
+                        if (MediaManager.loadPlaylistIntoMediaSession(MediaManager.songs, con)) {
+                            con.prepare()
+                        }
+                    }
+                }
                 if (MediaManager.isPaused) {
                     button.setImageResource(R.drawable.play_button)
                     con.pause()
@@ -343,7 +348,7 @@ class MainActivity : ComponentActivity() {
             try{
                 con.repeatMode = (con.repeatMode + 1) % 3
             } catch (e: UninitializedPropertyAccessException) {
-                Log.d("EXCEPTION", "Tryed to loop without a media instance")
+                Log.d("EXCEPTION", "Tried to loop without a media instance")
             }
             when (MediaManager.looping){
                 0 -> button.setImageResource(R.drawable.fluent_arrow_repeat_all_20_regular32)

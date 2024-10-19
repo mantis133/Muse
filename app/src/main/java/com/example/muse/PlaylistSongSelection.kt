@@ -2,8 +2,6 @@ package com.example.muse
 
 import android.content.ComponentName
 import android.content.Intent
-import android.graphics.BitmapFactory
-import android.media.MediaMetadataRetriever
 import android.os.Bundle
 import android.util.Log
 import android.view.Gravity
@@ -13,8 +11,6 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.ComponentActivity
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.MoreExecutors
@@ -22,8 +18,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.lang.IllegalStateException
 
 private data class PlaylistPosition(val pos: Int)
 
@@ -37,7 +31,7 @@ class PlaylistSongSelection : ComponentActivity() {
 
         loadNav()
 
-        if (MediaManager.songs == null){val nothing = TextView(this);nothing.text = "No Playlist is loaded"; nothing.textSize = 30f; nothing.textAlignment = TextView.TEXT_ALIGNMENT_CENTER; nothing.setTextColor(resources.getColor(R.color.black)); bigContainer.addView(nothing);return}
+        if (!MediaManager.doSongsExist()){val nothing = TextView(this);nothing.text = "No Playlist is loaded"; nothing.textSize = 30f; nothing.textAlignment = TextView.TEXT_ALIGNMENT_CENTER; nothing.setTextColor(resources.getColor(R.color.black)); bigContainer.addView(nothing);return}
 
         val songList = MediaManager.songs
 
@@ -52,7 +46,7 @@ class PlaylistSongSelection : ComponentActivity() {
 
         GlobalScope.launch(Dispatchers.IO){
             for (i in 0 until songList.size) {
-                var song = songList[i]
+                val song = songList[i]
                 val name = song.name
                 val artist = song.artists
                 val img = song.getAlbumCover()

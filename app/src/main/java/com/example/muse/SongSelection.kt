@@ -3,43 +3,20 @@ package com.example.muse
 import android.content.ComponentName
 import android.os.Bundle
 import android.content.Intent
-import android.graphics.BitmapFactory
-import android.graphics.Color
-import android.os.Environment
-import android.os.PersistableBundle
 import android.util.DisplayMetrics
 import android.util.Log
-import android.widget.Button
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
-import androidx.core.view.marginBottom
-import androidx.core.view.marginTop
-import androidx.core.view.setMargins
-import androidx.media3.common.MediaItem
+import androidx.media3.common.Player.COMMAND_PREPARE
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
-import com.example.muse.ui.theme.MuseTheme
-import com.example.muse.util.Playlist
 import com.google.common.util.concurrent.MoreExecutors
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.File
-import java.util.Vector
 
 class SongSelection : ComponentActivity() {
 
@@ -106,7 +83,9 @@ class SongSelection : ComponentActivity() {
 //                        withContext(Dispatchers.Main){
                             MediaManager.initialize(con) // con should exist by the point this is clicked ???
                             if (MediaManager.loadPlaylistIntoMediaSession(list.songs, con)) {
-                                con.prepare()
+                                if (con.isCommandAvailable(COMMAND_PREPARE)){
+                                    con.prepare()
+                                }
                             }
 //                        }
 //                    }
