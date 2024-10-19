@@ -1,47 +1,32 @@
 package com.example.muse
 
-import android.Manifest
-import android.app.Activity
-import android.app.Notification
-import android.app.Notification.MediaStyle
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
+
+import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.pm.PackageManager
-import android.media.AudioManager
-import android.media.MediaPlayer
-import android.media.session.MediaSession
-import android.os.Build
 import android.os.Bundle
-import android.os.Environment
-import android.provider.MediaStore.Audio.Media
+import android.os.PersistableBundle
 import android.util.Log
-import android.view.View
-import android.widget.Button
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.SeekBar
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material3.MediumTopAppBar
-import androidx.compose.ui.graphics.Color
-import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.app.ActivityCompat
-import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import java.io.IOException
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.common.Player.COMMAND_PREPARE
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import com.google.common.util.concurrent.MoreExecutors
 import java.lang.IllegalStateException
 import java.io.File
-import java.lang.IllegalArgumentException
 
 
-class MainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity(R.layout.music_controls) {
     private lateinit var PlayButton: ImageButton
     private lateinit var NextButton : ImageButton
     private lateinit var LastButton : ImageButton
@@ -56,77 +41,15 @@ class MainActivity : ComponentActivity() {
     private lateinit var SongNameTexView: TextView
     private lateinit var ArtistTextView : TextView
 
-    private lateinit var TestButton : ImageButton
     private lateinit var receiver : BroadcastReceiver
 
+    private lateinit var con: MediaController
 
-    private var PlaylistCurrentPosition = 2
-    private var songPosition: Int? = 0
-
-
-    // Declare the permissions as constants
-    private val REQUEST_CODE = 1
-    private val PERMISSIONS = arrayOf(
-        Manifest.permission.READ_EXTERNAL_STORAGE,
-        Manifest.permission.WRITE_EXTERNAL_STORAGE
-    )
-
-    // Check if the permissions are granted
-    private fun hasPermissions(): Boolean {
-        for (permission in PERMISSIONS) {
-            if (ActivityCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
-                return false
-            }
-        }
-        return true
-    }
-
-    // Request the permissions if not granted
-    private fun requestPermissions() {
-        ActivityCompat.requestPermissions(this, PERMISSIONS, REQUEST_CODE)
-    }
-
-    // Handle the result of the permission request
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQUEST_CODE) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission granted, proceed with accessing storage emulated 0
-            } else {
-                // Permission denied, show a message to the user
-                Toast.makeText(this, "Please grant the permissions to access storage emulated 0", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setContentView(R.layout.music_controls)
-
-//        updateSongInfoRecursive()
-
-        receiver = object : BroadcastReceiver() {
-            override fun onReceive(p0: Context?, p1: Intent?) {
-                when(p1?.action){
-                    "com.muse.update_song_info" -> {
-                        updateSongInfo()
-                    }
-                }
-            }
-        }
-        val intentFilter = IntentFilter().apply {
-            addAction("com.muse.update_song_info")
-        }
-
-        registerReceiver(receiver,intentFilter)
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel("com.muse.music_channel", "Media Playback", NotificationManager.IMPORTANCE_LOW)
-            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
-        }
-
+//        setContentView(R.layout.music_controls)
 
         PlayButton = findViewById<ImageButton>(R.id.PlayButton)
         NextButton = findViewById(R.id.NextButton)
@@ -144,16 +67,22 @@ class MainActivity : ComponentActivity() {
 
 //        ThumbnailImage.scaleType = ImageView.ScaleType.CENTER_CROP
 
-        updateSongInfo()
+        updateSongInfoUI()
+        listeners()
+
 
         SongNameTexView.isSelected = true
 
         SongSeekBar.setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener{
             override fun onProgressChanged(p0: SeekBar?, progress: Int, fromUser: Boolean) {
-                CurrentSongPosText.text = "${MilliSecsToMins(progress)}"
-                MediaManager.trackPosition = progress
+                CurrentSongPosText.text = MilliSecsToMins(progress)
+
                 if (fromUser) {
-                    MediaManager.mediaPlayer?.seekTo(progress)
+                    Log.d("SeekBar Update", "pos:${progress}")
+                    Log.d("SeekBar Update", "max:${SongSeekBar.max}")
+                    Log.d("SeekBar Update", "should be:${con.currentPosition}")
+                    Log.d("SeekBar Update", "should be:${con.duration}")
+                    con.seekTo(progress.toLong())
                 }
 
                 if (progress == SongSeekBar.max){
@@ -161,7 +90,7 @@ class MainActivity : ComponentActivity() {
                     PlayButton.setImageResource(R.drawable.play_button)
 //                    MediaManager.skipNext()
                     SongSeekBar.progress = 0
-                    updateSongInfo()
+                    updateSongInfoUI()
                 }
             }
 
@@ -170,22 +99,6 @@ class MainActivity : ComponentActivity() {
             override fun onStopTrackingTouch(p0: SeekBar?) {}
         })
 
-
-        val updateSeekBar = object : Runnable {
-            override fun run() {
-                try {
-                    SongSeekBar.progress = MediaManager.mediaPlayer?.currentPosition ?: 0
-                    SongSeekBar.postDelayed(this, 1000)
-//                    updateSongInfoRecursive()
-                } catch (e:IllegalStateException) {
-                    // this just happens when the app swaps activity
-                    // this is because the media player is released causing the top call in the try block to access a variable that doesn't exist
-                    // idk what to put here cause leaving it blank just works
-                }
-            }
-        }
-
-        SongSeekBar.post(updateSeekBar)
 
         onSkipNext(NextButton)
         onSkipLast(LastButton)
@@ -205,36 +118,60 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         Log.d("creation","start")
+        val sessionToken = SessionToken(this, ComponentName(this, PlaybackService::class.java))
+        val controllerFuture = MediaController.Builder(this, sessionToken).buildAsync()
+        controllerFuture.addListener(
+            {
+                con = controllerFuture.get()
+                MediaManager.loadTrack(con.currentMediaItemIndex) // using this instead of initialize() leads the shuffle not being reset
+                updateSongInfoUI() // call loadTrack before here so that
+
+                val updateSeekBar = object : Runnable {
+                    override fun run() {
+                        try {
+                            SongSeekBar.progress = con.currentPosition.toInt() ?: 0
+                            SongSeekBar.postDelayed(this, 1000)
+                        } catch (e:IllegalStateException) {
+                            // this just happens when the app swaps activity
+                            // this is because the media player is released causing the top call in the try block to access a variable that doesn't exist
+                            // idk what to put here cause leaving it blank just works
+                        } catch (e:UninitializedPropertyAccessException){
+                            // happens when the MediaController is not yet initialized
+                            Log.d("SeekBar Update", "it happened again")
+                        }
+                    }
+                }
+                SongSeekBar.post(updateSeekBar)
+
+                con.addListener(
+                    object : Player.Listener {
+                        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                            super.onMediaItemTransition(mediaItem, reason)
+                            MediaManager.loadTrack(con.currentMediaItemIndex)
+                            updateSongInfoUI()
+                            Log.d("listener", "heard")
+                        }
+
+                        override fun onPlaybackStateChanged(playbackState: Int) {
+                            super.onPlaybackStateChanged(playbackState)
+                            updateSongInfoUI()
+                        }
+                    }
+                )
+
+            },
+            MoreExecutors.directExecutor())
 
     }
 
     override fun onStop() {
         super.onStop()
         Log.d("creation","stop")
+        con.release()
+//        MediaController.releaseFuture(controllerFuture)
     }
 
-//    private fun requestPermissions(){
-//        when {
-//            ContextCompat.checkSelfPermission(
-//                this,
-//                Manifest.permission.READ_EXTERNAL_STORAGE
-//            ) == PackageManager.PERMISSION_GRANTED -> {
-//                // perms allowed
-//            }
-//            ActivityCompat.shouldShowRequestPermissionRationale(
-//                this,
-//                Manifest.permission.READ_EXTERNAL_STORAGE
-//            ) -> {
-//                // man idek
-//        } else -> {
-//            // perms not asked yet
-//            requestPermisionLauncher.launch(
-//                Manifest.permission.READ_EXTERNAL_STORAGE
-//            )
-//        }
-//
-//        }
-//    }
+
 
     private fun MilliSecsToMins(Milliseconds: Int): String {
         val seconds = Milliseconds / 1000
@@ -268,11 +205,13 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun updateSongInfo(){
+    private fun updateSongInfoUI(){
         try{
-            val dur = MediaManager.mediaPlayer?.duration ?: 0
-            SongSeekBar.max = dur
-            TotalSongTime.text = MilliSecsToMins(dur)
+            val dur = con.duration ?: 0
+            SongSeekBar.max = dur.toInt()
+            TotalSongTime.text = MilliSecsToMins(dur.toInt())
+
+//            val mediaMetaData = con.currentMediaItem!!.mediaMetadata
 
             SongNameTexView.text = MediaManager.SongName
             ArtistTextView.text = MediaManager.ArtistName
@@ -281,6 +220,7 @@ class MainActivity : ComponentActivity() {
                 else -> ThumbnailImage.setImageBitmap(MediaManager.AlbumArtBitMap)
             }
         } catch (e: UninitializedPropertyAccessException){
+            Log.d("here","path 2")
             SongNameTexView.text = "No Song Playing"
             ArtistTextView.text = "Unknown"
             ThumbnailImage.setImageResource(R.drawable.home_icon)
@@ -290,37 +230,29 @@ class MainActivity : ComponentActivity() {
         } else {
             PlayButton.setImageResource(R.drawable.pause_button)
         }
+
+
+//        media.artist
+//        media.title
+//        media.artworkUri
+
     }
 
-    private fun updateSongInfoRecursive(){
-        try {
-            val mediaPlayer = MediaManager.mediaPlayer!!
-            mediaPlayer.setOnCompletionListener {
-                MediaManager.skipNext()
-                updateSongInfo()
-                Intent(this, MusicService::class.java).also { it.action = MusicService.Actions.UPDATE.toString(); startService(it) }
-                updateSongInfoRecursive()
+    private fun listeners(){
+        receiver = object : BroadcastReceiver() {
+            override fun onReceive(p0: Context?, p1: Intent?) {
+                when(p1?.action){
+                    "com.muse.update_song_info" -> {
+                        updateSongInfoUI()
+                    }
+                }
             }
-        } catch(e: NullPointerException) {
-
         }
-    }
-
-    private fun onSkipNext(button: ImageButton){
-        button.setOnClickListener {
-            MediaManager.skipNext()
-            updateSongInfo()
-            Intent(this, MusicService::class.java).also { it.action = MusicService.Actions.UPDATE.toString(); startService(it) }
-        }
-    }
-
-    private fun onSkipLast(button: ImageButton){
-        button.setOnClickListener {
-            MediaManager.skipLast()
-            updateSongInfo()
-            Intent(this, MusicService::class.java).also { it.action = MusicService.Actions.UPDATE.toString(); startService(it) }
+        val intentFilter = IntentFilter().apply {
+            addAction("com.muse.update_song_info")
         }
 
+        registerReceiver(receiver,intentFilter)
     }
 
     private fun onPlayPause(button:ImageButton){
@@ -329,36 +261,64 @@ class MainActivity : ComponentActivity() {
         } else {
             button.setImageResource(R.drawable.pause_button)
         }
-
-        try {
-            val mightFile = MediaManager.SongName
-        } catch (e: UninitializedPropertyAccessException){
-            return
-        }
-
         button.setOnClickListener{
-            MediaManager.isPaused = !MediaManager.isPaused
-            if (MediaManager.isPaused) {
-                button.setImageResource(R.drawable.play_button)
-                MediaManager.pause()
-                Intent(this, MusicService::class.java).also { it.action = MusicService.Actions.UNREGISTER.toString(); startService(it) }
-                Intent(this, MusicService::class.java).also{ it.action = MusicService.Actions.START.toString();startService(it) }
-                Intent(this, MusicService::class.java).also {it.action = MusicService.Actions.PLAYING.toString(); startService(it)}
-            } else {
-                Log.d("play","button")
-                button.setImageResource(R.drawable.pause_button)
-                MediaManager.play()
-                Intent(this, MusicService::class.java).also { it.action = MusicService.Actions.UNREGISTER.toString(); startService(it) }
-                Intent(this, MusicService::class.java).also{ it.action = MusicService.Actions.START.toString();startService(it) }
-                Intent(this, MusicService::class.java).also { it.action = MusicService.Actions.PAUSED.toString(); startService(it) }
-
+            try {
+                MediaManager.isPaused = con.isPlaying
+                // check that con is initialized -> check if con does not have a media item loaded
+                // if both of these are true then reload the playlist from the one stored in media manager
+                if (this::con.isInitialized && con.currentMediaItem == null) {
+                    if (con.isCommandAvailable(COMMAND_PREPARE)){
+                        if (MediaManager.loadPlaylistIntoMediaSession(MediaManager.songs, con)) {
+                            con.prepare()
+                        }
+                    }
+                }
+                if (MediaManager.isPaused) {
+                    button.setImageResource(R.drawable.play_button)
+                    con.pause()
+                } else {
+                    button.setImageResource(R.drawable.pause_button)
+                    con.play()
+                }
+            } catch (e: UninitializedPropertyAccessException){
+                // this will happen if the MediaController does not currently exist
+                // i.e the media cannot be played, so this does not need to change
+                // so we can return out
+                return@setOnClickListener
             }
         }
     }
 
+    private fun onSkipNext(button: ImageButton){
+        button.setOnClickListener {
+            updateSongInfoUI()
+            con.seekToNextMediaItem()
+
+
+        }
+    }
+
+    private fun onSkipLast(button: ImageButton){
+        button.setOnClickListener {
+            updateSongInfoUI()
+            con.seekToPreviousMediaItem()
+            Log.d("TEST SESSION", con.currentPosition.toString())
+            Log.d("TEST SESSION", con.currentPosition.toInt().toString())
+            Log.d("TEST SESSION", con.duration.toString())
+            Log.d("TEST SESSION", con.currentMediaItem!!.mediaMetadata.artist.toString())
+            Log.d("TEST SESSION", con.currentMediaItem!!.mediaMetadata.title.toString())
+            Log.d("TEST SESSION", con.playlistMetadata.artist.toString())
+            Log.d("TEST SESSION", con.nextMediaItemIndex.toString())
+            Log.d("TEST SESSION", con.isPlaying.toString())
+
+
+        }
+
+    }
+
     private fun onShuffle(button: ImageButton){
 
-        if (MediaManager.playlist == null){return}
+//        if (MediaManager.playlist == null){return}
 
         if (MediaManager.shuffled) {
             button.setColorFilter(R.color.banana)
@@ -366,44 +326,47 @@ class MainActivity : ComponentActivity() {
             button.setColorFilter(null)
         }
         button.setOnClickListener{
-            MediaManager.toggleShuffle()
-            MediaManager.loadPlaylistTrack()
-            MediaManager.play()
-            updateSongInfo()
-            Intent(this, MusicService::class.java).also { it.action = MusicService.Actions.UNREGISTER.toString(); startService(it) }
-            Intent(this, MusicService::class.java).also{ it.action = MusicService.Actions.START.toString();startService(it) }
-            Intent(this, MusicService::class.java).also { it.action = MusicService.Actions.PAUSED.toString(); startService(it) }
+            MediaManager.toggleShuffle(con)
             if (MediaManager.shuffled) {
                 button.setColorFilter(R.color.banana)
             } else {
                 button.setColorFilter(null)
-//                button.setColorFilter(R.color.darker_yellow)
             }
         }
     }
 
+    @SuppressLint("ResourceAsColor")
     private fun onLoop(button: ImageButton){
-        if (MediaManager.looping) {
-            button.setColorFilter(R.color.banana)
-        } else {
-            button.setColorFilter(null)
-        }
+//        when (MediaManager.looping){
+//            0 -> button.setColorFilter(R.color.black)
+//            1 -> button.setColorFilter(R.color.banana)
+//            2 -> button.setColorFilter(R.color.teal_200)
+//            else -> button.setColorFilter(null)
+//        }
         button.setOnClickListener {
-            MediaManager.looping = !MediaManager.looping
-            if (MediaManager.looping) {
-                button.setColorFilter(R.color.banana)
-            } else if (!MediaManager.looping) {
-                button.setColorFilter(null)
-//                button.setColorFilter(R.color.darker_yellow)
+            MediaManager.looping = (MediaManager.looping + 1) % 3
+            try{
+                con.repeatMode = (con.repeatMode + 1) % 3
+            } catch (e: UninitializedPropertyAccessException) {
+                Log.d("EXCEPTION", "Tried to loop without a media instance")
+            }
+            when (MediaManager.looping){
+                0 -> button.setImageResource(R.drawable.fluent_arrow_repeat_all_20_regular32)
+                1 -> button.setImageResource(R.drawable.fluent_arrow_repeat_1_20_filled32)
+                2 -> button.setImageResource(R.drawable.fluent_arrow_repeat_all_20_filled32)
+                else -> button.setColorFilter(null)
             }
         }
+    }
+
+    @Override
+    override fun onSaveInstanceState(outState: Bundle, outPersistentState: PersistableBundle) {
+        super.onSaveInstanceState(outState, outPersistentState)
     }
 
     override fun onResume() { // think this is when the activity regains focus
         super.onResume()
-        updateSongInfo()
-//        songPosition?.let { mediaPlayer?.seekTo(it) }
-//        mediaPlayer?.start()
+        updateSongInfoUI()
         Log.d("resum", "resumed")
     }
 
@@ -415,13 +378,11 @@ class MainActivity : ComponentActivity() {
 //        unregisterReceiver(receiver)
     }
 
-
-
     override fun onDestroy() {
         super.onDestroy()
-        MediaManager.kill()
+//        MediaManager.kill()
         unregisterReceiver(receiver)
-        Intent(this, MusicService::class.java).also{it.action = MusicService.Actions.STOP.toString();startService(it)}
+//        Intent(this, MusicService::class.java).also{it.action = MusicService.Actions.STOP.toString();startService(it)}
     }
 
 }

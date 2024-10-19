@@ -18,7 +18,7 @@ class HeadphoneReceiver() : BroadcastReceiver() {
             when(intent.getIntExtra("state",-1)){
                 0 -> {/*headphones unplugged*/
                     Log.d(TAG,"unplugged")
-                    MediaManager.pause()
+//                    MediaManager.togglePlayPause()
                 }
                 1 -> {/*headphones plugged in*/
                     Log.d(TAG,"plugged in")
@@ -28,7 +28,7 @@ class HeadphoneReceiver() : BroadcastReceiver() {
 
         }
         if (BluetoothDevice.ACTION_ACL_DISCONNECTED == intent?.action){
-            val device: BluetoothDevice? = intent?.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
+            val device: BluetoothDevice? = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
             if (ActivityCompat.checkSelfPermission(
                     context,
                     Manifest.permission.BLUETOOTH_CONNECT
@@ -46,7 +46,7 @@ class HeadphoneReceiver() : BroadcastReceiver() {
                     if (device.bluetoothClass.deviceClass == BluetoothClass.Device.AUDIO_VIDEO_HEADPHONES ||
                         device.bluetoothClass.deviceClass == BluetoothClass.Device.AUDIO_VIDEO_WEARABLE_HEADSET) {
                         // Handle the pause/stop action
-                        MediaManager.pause()
+//                        MediaManager.togglePlayPause()
                     }
                 }
             }
